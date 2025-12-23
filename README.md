@@ -1,4 +1,27 @@
 # Real-Time Trading Platform (Testnet)
+# Real-Time Crypto Trading Platform
+
+> A full-stack microservices trading platform with real-time order execution, WebSocket updates, and live price charts.
+
+## 🌐 Live Deployment
+
+**🚀 Try it now:** [https://numatix-frontend.vercel.app/](https://numatix-frontend.vercel.app/)
+
+### Production URLs
+- **Frontend**: https://numatix-frontend.vercel.app/ (Vercel)
+- **Backend API**: https://trading-backend-1tpv.onrender.com (Render)
+- **Event Service**: https://event-service-kxmm.onrender.com (Render)
+- **Execution Service**: https://execution-service-veee.onrender.com (Render)
+
+### Quick Start
+1. Visit the [live app](https://numatix-frontend.vercel.app/)
+2. Register with any email/password
+3. Enter your [Binance Testnet](https://testnet.binance.vision/) API keys
+4. Start trading! (First load may take ~30s due to free tier cold start)
+
+**Note**: All services run on free tiers (Vercel + Render). Services may sleep after 15 minutes of inactivity.
+
+---
 
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.3-blue)](https://www.typescriptlang.org/)
 [![Next.js](https://img.shields.io/badge/Next.js-14-black)](https://nextjs.org/)
