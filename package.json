@@ -1,0 +1,19 @@
+{
+  "name": "trading-platform",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "turbo run dev --parallel",
+    "build": "turbo run build",
+    "start": "turbo run start",
+    "lint": "turbo run lint"
+  },
+  "devDependencies": {
+    "tsx": "^4.21.0",
+    "turbo": "^1.10.16"
+  }
+}
