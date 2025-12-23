@@ -105,6 +105,7 @@ async function executeOrder(command: OrderCommand): Promise<OrderEvent> {
     );
 
     const binanceOrder = response.data;
+    console.log('Binance order response:', JSON.stringify(binanceOrder, null, 2));
 
     // Map Binance status to our status
     let status: 'FILLED' | 'REJECTED' | 'PARTIALLY_FILLED' | 'PENDING' = 'PENDING';
@@ -116,6 +117,26 @@ async function executeOrder(command: OrderCommand): Promise<OrderEvent> {
       status = 'REJECTED';
     }
 
+    // Extract execution price
+    let executionPrice = 0;
+    const priceValue = parseFloat(binanceOrder.price || '0');
+
+    if (priceValue > 0) {
+      // LIMIT orders have non-zero price field
+      executionPrice = priceValue;
+    } else if (binanceOrder.fills && binanceOrder.fills.length > 0) {
+      // MARKET orders: calculate average price from fills
+      const totalValue = binanceOrder.fills.reduce((sum: number, fill: any) => {
+        return sum + (parseFloat(fill.price) * parseFloat(fill.qty));
+      }, 0);
+      const totalQty = binanceOrder.fills.reduce((sum: number, fill: any) => {
+        return sum + parseFloat(fill.qty);
+      }, 0);
+      executionPrice = totalQty > 0 ? totalValue / totalQty : 0;
+    }
+
+    console.log('Extracted execution price:', executionPrice);
+
     const orderEvent: OrderEvent = {
       orderId: command.orderId,
       userId: command.userId,
@@ -123,7 +144,7 @@ async function executeOrder(command: OrderCommand): Promise<OrderEvent> {
       symbol: command.symbol,
       side: command.side,
       quantity: parseFloat(binanceOrder.executedQty || command.quantity.toString()),
-      price: parseFloat(binanceOrder.price || binanceOrder.fills?.[0]?.price || '0'),
+      price: executionPrice,
       timestamp: new Date().toISOString(),
     };
 
@@ -183,10 +204,13 @@ async function main() {
         },
       });
 
-      // Update order command status
+      // Update order command status and price
       await prisma.orderCommand.update({
         where: { orderId: command.orderId },
-        data: { status: event.status },
+        data: {
+          status: event.status,
+          price: event.price > 0 ? event.price : command.price, // Update with execution price for MARKET orders
+        },
       }).catch(() => {
         // Order command might not exist yet, that's okay
       });
