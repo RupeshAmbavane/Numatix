@@ -7,7 +7,7 @@ import type { OrderEvent, WebSocketMessage } from '@trading-platform/shared-type
 dotenv.config();
 
 const redisUrl = process.env.REDIS_URL || 'redis://localhost:6379';
-const WS_PORT = parseInt(process.env.WS_PORT || '3002', 10);
+const WS_PORT = parseInt(process.env.PORT || process.env.WS_PORT || '3002', 10);
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
 
 // Map of userId -> WebSocket connections
@@ -21,8 +21,8 @@ wss.on('connection', (ws: WebSocket, req) => {
 
   // Extract token from query string or headers
   const url = new URL(req.url || '', `http://${req.headers.host}`);
-  const token = url.searchParams.get('token') || 
-                req.headers.authorization?.split(' ')[1];
+  const token = url.searchParams.get('token') ||
+    req.headers.authorization?.split(' ')[1];
 
   if (!token) {
     ws.close(1008, 'Authentication required');
