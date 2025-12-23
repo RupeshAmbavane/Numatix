@@ -19,6 +19,9 @@
 3. Enter your [Binance Testnet](https://testnet.binance.vision/) API keys
 4. Start trading! (First load may take ~30s due to free tier cold start)
 
+> [!IMPORTANT]
+> **Live Deployment Limitation**: Binance Testnet API blocks requests from US-based servers (Render's Oregon datacenter). The live deployment may show "Balance unavailable" and orders may not execute due to geo-restrictions. **All features work perfectly when running locally** (see [Local Setup](#setup-instructions) below). This is a common production challenge with crypto APIs that implement regional restrictions.
+
 **Note**: All services run on free tiers (Vercel + Render). Services may sleep after 15 minutes of inactivity.
 
 ---
@@ -738,6 +741,35 @@ The following sections were **assisted by AI** (Claude/ChatGPT) but heavily revi
 # Spam 25 orders (see API docs)
 # First 20 succeed, rest fail with rate limit error
 ```
+
+---
+
+## ⚠️ Known Limitations
+
+### Live Deployment (Render + Vercel)
+
+1. **Binance API Geo-Restrictions**
+   - Binance Testnet blocks requests from US-based servers
+   - Render's free tier deploys to Oregon, USA by default
+   - **Impact**: Balance fetching and order execution may fail on live deployment
+   - **Workaround**: All features work perfectly when running locally
+   - This demonstrates a real-world production challenge with geo-restricted APIs
+
+2. **Free Tier Cold Starts**
+   - Services sleep after 15 minutes of inactivity
+   - First request takes ~30 seconds to wake up
+   - Subsequent requests are instant
+
+3. **Database & Redis Limits**
+   - PostgreSQL: 1GB storage (sufficient for demo)
+   - Redis: 25MB memory (adequate for message queue)
+
+### Recommendations for Production
+
+- Deploy backend to a region where Binance API is accessible (e.g., Singapore, Europe)
+- Use paid tiers to eliminate cold starts
+- Implement caching layer for frequently accessed data
+- Add monitoring and alerting for API failures
 
 ---
 
