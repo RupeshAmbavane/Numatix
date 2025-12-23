@@ -4,14 +4,15 @@ import { PrismaClient } from '@prisma/client';
 import axios from 'axios';
 import crypto from 'crypto';
 import path from 'path';
+import express from 'express';
 import type { OrderCommand, OrderEvent } from '@trading-platform/shared-types';
 
 dotenv.config();
 
 const redisUrl = process.env.REDIS_URL || 'redis://localhost:6379';
-// Use absolute path for database
 const databaseUrl = process.env.DATABASE_URL || `file:${path.join(__dirname, '../../backend/dev.db')}`;
 const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY || '';
+const PORT = process.env.PORT || 3004;
 
 const prisma = new PrismaClient({
   datasources: {
@@ -27,12 +28,10 @@ const BINANCE_TESTNET_API = 'https://testnet.binance.vision/api';
 function decrypt(encryptedText: string): string {
   try {
     if (!ENCRYPTION_KEY) {
-      // Fallback: base64 decoding
       return Buffer.from(encryptedText, 'base64').toString('utf8');
     }
     const parts = encryptedText.split(':');
     if (parts.length !== 2) {
-      // Try base64 fallback
       return Buffer.from(encryptedText, 'base64').toString('utf8');
     }
     const iv = Buffer.from(parts[0], 'hex');
@@ -59,7 +58,6 @@ function createSignature(queryString: string, secretKey: string): string {
 // Execute order on Binance Testnet
 async function executeOrder(command: OrderCommand): Promise<OrderEvent> {
   try {
-    // Get user's API keys
     const user = await prisma.user.findUnique({
       where: { id: command.userId },
     });
@@ -71,15 +69,14 @@ async function executeOrder(command: OrderCommand): Promise<OrderEvent> {
     const apiKey = decrypt(user.binanceApiKey);
     const secretKey = decrypt(user.binanceSecretKey);
 
-    // Prepare order parameters
-    const timestamp = Date.now() - 1000; // Subtract 1 second to handle clock skew
+    const timestamp = Date.now() - 1000;
     const params: Record<string, string> = {
       symbol: command.symbol,
       side: command.side,
       type: command.type,
       quantity: command.quantity.toString(),
       timestamp: timestamp.toString(),
-      recvWindow: '5000', // 5 second receive window
+      recvWindow: '5000',
     };
 
     if (command.type === 'LIMIT' && command.price) {
@@ -91,12 +88,10 @@ async function executeOrder(command: OrderCommand): Promise<OrderEvent> {
     const signature = createSignature(queryString, secretKey);
 
     console.log('Order params:', params);
-    console.log('Query string:', queryString);
 
-    // Call Binance Testnet API
     const response = await axios.post(
       `${BINANCE_TESTNET_API}/v3/order?${queryString}&signature=${signature}`,
-      null, // Must be null, not empty object
+      null,
       {
         headers: {
           'X-MBX-APIKEY': apiKey,
@@ -107,7 +102,6 @@ async function executeOrder(command: OrderCommand): Promise<OrderEvent> {
     const binanceOrder = response.data;
     console.log('Binance order response:', JSON.stringify(binanceOrder, null, 2));
 
-    // Map Binance status to our status
     let status: 'FILLED' | 'REJECTED' | 'PARTIALLY_FILLED' | 'PENDING' = 'PENDING';
     if (binanceOrder.status === 'FILLED') {
       status = 'FILLED';
@@ -122,10 +116,8 @@ async function executeOrder(command: OrderCommand): Promise<OrderEvent> {
     const priceValue = parseFloat(binanceOrder.price || '0');
 
     if (priceValue > 0) {
-      // LIMIT orders have non-zero price field
       executionPrice = priceValue;
     } else if (binanceOrder.fills && binanceOrder.fills.length > 0) {
-      // MARKET orders: calculate average price from fills
       const totalValue = binanceOrder.fills.reduce((sum: number, fill: any) => {
         return sum + (parseFloat(fill.price) * parseFloat(fill.qty));
       }, 0);
@@ -152,7 +144,6 @@ async function executeOrder(command: OrderCommand): Promise<OrderEvent> {
   } catch (error: any) {
     console.error('Order execution error:', error.response?.data || error.message);
 
-    // Return rejected event
     return {
       orderId: command.orderId,
       userId: command.userId,
@@ -169,6 +160,16 @@ async function executeOrder(command: OrderCommand): Promise<OrderEvent> {
 async function main() {
   console.log('Order Execution Service starting...');
 
+  // Create Express app for health check
+  const app = express();
+  app.get('/health', (req, res) => {
+    res.json({ status: 'ok', service: 'execution-service' });
+  });
+
+  app.listen(PORT, () => {
+    console.log(`Execution Service health endpoint on port ${PORT}`);
+  });
+
   // Connect to Redis
   const subscriber = createClient({ url: redisUrl });
   const publisher = createClient({ url: redisUrl });
@@ -184,13 +185,10 @@ async function main() {
       const command: OrderCommand = JSON.parse(message);
       console.log('Received order command:', command.orderId);
 
-      // Execute order
       const event = await executeOrder(command);
 
-      // Publish event to Redis
       await publisher.publish('events:order:status', JSON.stringify(event));
 
-      // Log event to database
       await prisma.orderEvent.create({
         data: {
           orderId: event.orderId,
@@ -204,16 +202,13 @@ async function main() {
         },
       });
 
-      // Update order command status and price
       await prisma.orderCommand.update({
         where: { orderId: command.orderId },
         data: {
           status: event.status,
-          price: event.price > 0 ? event.price : command.price, // Update with execution price for MARKET orders
+          price: event.price > 0 ? event.price : command.price,
         },
-      }).catch(() => {
-        // Order command might not exist yet, that's okay
-      });
+      }).catch(() => { });
 
       console.log('Order executed:', event.orderId, event.status);
     } catch (error) {
@@ -228,4 +223,3 @@ main().catch((error) => {
   console.error('Fatal error:', error);
   process.exit(1);
 });
-
