@@ -53,18 +53,18 @@ graph TB
     end
     
     subgraph "Data Layer"
-        DB[(PostgreSQL<br/>Prisma ORM)]
+        DB[(SQLite<br/>Prisma ORM)]
     end
     
     UI -->|HTTP/REST| GW
     UI <-->|WebSocket| EVENT
-    GW -->|Publish Commands| REDIS
+    GW -->|Publish Commands<br/>commands:order:submit| REDIS
     GW <-->|Read/Write| DB
-    REDIS -->|Subscribe Commands| EXEC
+    REDIS -->|Subscribe Commands<br/>commands:order:submit| EXEC
     EXEC -->|HTTP| BINANCE
-    EXEC -->|Publish Events| REDIS
-    REDIS -->|Subscribe Events| EVENT
-    EVENT -->|Broadcast| UI
+    EXEC -->|Publish Events<br/>events:order:status| REDIS
+    REDIS -->|Subscribe Events<br/>events:order:status| EVENT
+    EVENT -->|Broadcast<br/>WebSocket| UI
     EXEC <-->|Read/Write| DB
 ```
 
