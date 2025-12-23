@@ -6,6 +6,7 @@
     "dev": "npx tsx watch src/index.ts",
     "build": "tsc",
     "start": "node dist/index.js",
+    "start:prod": "npx tsx src/index.ts",
     "lint": "eslint src --ext .ts",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev"
@@ -20,6 +21,7 @@
     "express-rate-limit": "^8.2.1",
     "jsonwebtoken": "^9.0.2",
     "redis": "^4.6.11",
+    "tsx": "^4.7.0",
     "zod": "^3.25.76"
   },
   "devDependencies": {
@@ -30,7 +32,6 @@
     "@types/node": "^20.10.5",
     "eslint": "^8.56.0",
     "prisma": "^5.7.1",
-    "tsx": "^4.7.0",
     "typescript": "^5.3.3"
   }
 }
