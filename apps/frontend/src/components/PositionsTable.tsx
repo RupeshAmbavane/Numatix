@@ -197,7 +197,11 @@ export default function PositionsTable() {
                     <td className="py-2 px-3 text-text-secondary">{order.type}</td>
                     <td className="py-2 px-3 text-right text-text-primary">{order.quantity}</td>
                     <td className="py-2 px-3 text-right text-text-primary">
-                      {order.price ? `$${parseFloat(order.price).toFixed(2)}` : <span className="text-text-secondary">Market</span>}
+                      {order.filledPrice
+                        ? `$${parseFloat(order.filledPrice).toFixed(2)}`
+                        : order.price
+                          ? `$${parseFloat(order.price).toFixed(2)}`
+                          : <span className="text-text-secondary">Market</span>}
                     </td>
                     <td className="py-2 px-3">
                       <span

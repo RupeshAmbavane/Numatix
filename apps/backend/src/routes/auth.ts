@@ -7,7 +7,12 @@ import crypto from "crypto";
 import { authLimiter } from "../middleware/rateLimiter";
 
 const router = Router();
-const JWT_SECRET = process.env.JWT_SECRET || "your-secret-key";
+
+// Read JWT_SECRET lazily to ensure .env is loaded first
+const getJwtSecret = () => {
+  const secret = process.env.JWT_SECRET || "your-secret-key";
+  return secret;
+};
 
 // Simple encryption/decryption for API keys (in production, use proper key management)
 const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY || "";
@@ -86,7 +91,7 @@ router.post("/register", authLimiter, async (req: Request, res: Response) => {
     console.log("User created successfully:", user.id, user.email);
 
     // Generate JWT
-    const token = jwt.sign({ userId: user.id, email: user.email }, JWT_SECRET, {
+    const token = jwt.sign({ userId: user.id, email: user.email }, getJwtSecret(), {
       expiresIn: "7d",
     });
 
@@ -142,7 +147,7 @@ router.post("/login", authLimiter, async (req: Request, res: Response) => {
     console.log("Password verified, generating token...");
 
     // Generate JWT
-    const token = jwt.sign({ userId: user.id, email: user.email }, JWT_SECRET, {
+    const token = jwt.sign({ userId: user.id, email: user.email }, getJwtSecret(), {
       expiresIn: "7d",
     });
 

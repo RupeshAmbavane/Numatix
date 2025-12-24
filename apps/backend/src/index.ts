@@ -1,17 +1,26 @@
+import dotenv from 'dotenv';
+import path from 'path';
+
+// Load environment variables FIRST, before any other imports
+const envPath = path.join(process.cwd(), '.env');
+console.log('Loading .env from:', envPath);
+const result = dotenv.config({ path: envPath });
+console.log('Dotenv result:', result.error ? result.error.message : 'SUCCESS');
+console.log('JWT_SECRET from process.env:', process.env.JWT_SECRET);
+
 import express from 'express';
 import cors from 'cors';
-import dotenv from 'dotenv';
 import { authRouter } from './routes/auth';
 import { tradingRouter } from './routes/trading';
-
-dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
 app.use(cors({
-  origin: true, // Allow all origins for production
+  origin: ['http://localhost:3003', 'http://localhost:3000'], // Allow frontend origins
   credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
 }));
 app.use(express.json());
 

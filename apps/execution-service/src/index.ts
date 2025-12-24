@@ -158,7 +158,12 @@ async function executeOrder(command: OrderCommand): Promise<OrderEvent> {
 }
 
 async function main() {
+  console.log('========================================');
   console.log('Order Execution Service starting...');
+  console.log('Redis URL:', redisUrl);
+  console.log('Database URL:', databaseUrl.substring(0, 30) + '...');
+  console.log('Port:', PORT);
+  console.log('========================================');
 
   // Create Express app for health check
   const app = express();
@@ -167,27 +172,49 @@ async function main() {
   });
 
   app.listen(PORT, () => {
-    console.log(`Execution Service health endpoint on port ${PORT}`);
+    console.log(`✓ Execution Service health endpoint on port ${PORT}`);
   });
 
   // Connect to Redis
+  console.log('Connecting to Redis...');
   const subscriber = createClient({ url: redisUrl });
   const publisher = createClient({ url: redisUrl });
 
-  await subscriber.connect();
-  await publisher.connect();
+  subscriber.on('error', (err) => {
+    console.error('Redis Subscriber Error:', err);
+  });
 
-  console.log('Connected to Redis');
+  publisher.on('error', (err) => {
+    console.error('Redis Publisher Error:', err);
+  });
+
+  try {
+    await subscriber.connect();
+    console.log('✓ Subscriber connected to Redis');
+
+    await publisher.connect();
+    console.log('✓ Publisher connected to Redis');
+  } catch (error) {
+    console.error('Failed to connect to Redis:', error);
+    process.exit(1);
+  }
+
+  console.log('✓ Connected to Redis successfully');
 
   // Subscribe to order commands
   await subscriber.subscribe('commands:order:submit', async (message) => {
     try {
       const command: OrderCommand = JSON.parse(message);
+      console.log('========================================');
       console.log('Received order command:', command.orderId);
+      console.log('Order details:', JSON.stringify(command, null, 2));
+      console.log('========================================');
 
       const event = await executeOrder(command);
+      console.log('Order execution result:', JSON.stringify(event, null, 2));
 
       await publisher.publish('events:order:status', JSON.stringify(event));
+      console.log('Published order status event');
 
       await prisma.orderEvent.create({
         data: {
@@ -201,6 +228,7 @@ async function main() {
           timestamp: new Date(event.timestamp),
         },
       });
+      console.log('Created OrderEvent in database');
 
       await prisma.orderCommand.update({
         where: { orderId: command.orderId },
@@ -209,6 +237,7 @@ async function main() {
           price: event.price > 0 ? event.price : command.price,
         },
       }).catch(() => { });
+      console.log('Updated OrderCommand status to:', event.status);
 
       console.log('Order executed:', event.orderId, event.status);
     } catch (error) {

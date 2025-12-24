@@ -10,6 +10,8 @@ const redisUrl = process.env.REDIS_URL || 'redis://localhost:6379';
 const WS_PORT = parseInt(process.env.PORT || process.env.WS_PORT || '3002', 10);
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
 
+console.log('Event-service JWT_SECRET:', JWT_SECRET);
+
 // Map of userId -> WebSocket connections
 const userConnections = new Map<string, Set<WebSocket>>();
 
@@ -17,7 +19,10 @@ const userConnections = new Map<string, Set<WebSocket>>();
 const wss = new WebSocketServer({ port: WS_PORT });
 
 wss.on('connection', (ws: WebSocket, req) => {
-  console.log('New WebSocket connection');
+  console.log('========================================');
+  console.log('New WebSocket connection attempt');
+  console.log('URL:', req.url);
+  console.log('Headers:', req.headers);
 
   // Extract token from query string or headers
   const url = new URL(req.url || '', `http://${req.headers.host}`);
@@ -25,16 +30,21 @@ wss.on('connection', (ws: WebSocket, req) => {
     req.headers.authorization?.split(' ')[1];
 
   if (!token) {
+    console.log('❌ No token provided, closing connection');
     ws.close(1008, 'Authentication required');
     return;
   }
+
+  console.log('Token received:', token.substring(0, 20) + '...');
 
   let userId: string;
 
   try {
     const decoded = jwt.verify(token, JWT_SECRET) as { userId: string; email: string };
     userId = decoded.userId;
-  } catch (error) {
+    console.log('✓ Token verified for user:', userId);
+  } catch (error: any) {
+    console.log('❌ Token verification failed:', error.message);
     ws.close(1008, 'Invalid token');
     return;
   }

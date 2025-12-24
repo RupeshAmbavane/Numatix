@@ -46,7 +46,8 @@ router.post('/orders', orderLimiter, authenticateToken, async (req: AuthRequest,
 
     // Publish to Redis
     await connectRedis();
-    await redisClient.publish('commands:order:submit', JSON.stringify(command));
+    const publishResult = await redisClient.publish('commands:order:submit', JSON.stringify(command));
+    console.log(`Published order ${orderId} to Redis, subscribers: ${publishResult}`);
 
     // Log to database
     await prisma.orderCommand.create({
@@ -92,7 +93,29 @@ router.get('/orders', authenticateToken, async (req: AuthRequest, res: Response)
       },
     });
 
-    res.json(orders);
+    // For each order, fetch the corresponding OrderEvent to get filled price
+    const ordersWithFilledPrice = await Promise.all(
+      orders.map(async (order) => {
+        if (order.status === 'FILLED') {
+          // Get the most recent filled event for this order
+          const filledEvent = await prisma.orderEvent.findFirst({
+            where: {
+              orderId: order.orderId,
+              status: 'FILLED',
+            },
+            orderBy: { timestamp: 'desc' },
+          });
+
+          return {
+            ...order,
+            filledPrice: filledEvent?.price,
+          };
+        }
+        return order;
+      })
+    );
+
+    res.json(ordersWithFilledPrice);
   } catch (error) {
     console.error('Get orders error:', error);
     res.status(500).json({ error: 'Failed to fetch orders' });
@@ -191,47 +214,50 @@ router.get('/positions', authenticateToken, async (req: AuthRequest, res: Respon
       orderBy: { timestamp: 'desc' },
     });
 
+    console.log(`Found ${filledOrders.length} filled orders for user ${userId}`);
+
     // Calculate positions by symbol
     const positionsMap = new Map<string, {
       symbol: string;
-      side: string;
       quantity: number;
       entryPrice: number;
       totalCost: number;
     }>();
 
     for (const order of filledOrders) {
-      const key = `${order.symbol}_${order.side}`;
+      const key = order.symbol; // Use only symbol, not symbol_side
       const existing = positionsMap.get(key);
 
       if (existing) {
         if (order.side === 'BUY') {
           existing.quantity += order.quantity;
           existing.totalCost += order.quantity * order.price;
-          existing.entryPrice = existing.totalCost / existing.quantity;
-        } else {
+          if (existing.quantity > 0) {
+            existing.entryPrice = existing.totalCost / existing.quantity;
+          }
+        } else { // SELL
           existing.quantity -= order.quantity;
+          existing.totalCost -= order.quantity * existing.entryPrice; // Use average entry price
           if (existing.quantity <= 0) {
             positionsMap.delete(key);
-          } else {
-            existing.totalCost -= order.quantity * order.price;
-            existing.entryPrice = existing.totalCost / existing.quantity;
           }
         }
       } else {
         if (order.side === 'BUY') {
           positionsMap.set(key, {
             symbol: order.symbol,
-            side: order.side,
             quantity: order.quantity,
             entryPrice: order.price,
             totalCost: order.quantity * order.price,
           });
         }
+        // Don't create a position for SELL if there's no existing BUY position
       }
     }
 
     const positions = Array.from(positionsMap.values());
+
+    console.log(`Calculated ${positions.length} positions:`, JSON.stringify(positions, null, 2));
 
     res.json(positions);
   } catch (error) {

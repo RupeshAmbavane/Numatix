@@ -33,7 +33,7 @@
 
 A production-grade, full-stack real-time trading platform built with microservices architecture, demonstrating event-driven design patterns and WebSocket-based real-time updates.
 
-**Live Demo Video:** [YouTube Link](YOUR_VIDEO_LINK_HERE)
+**Live Demo Video:** [Watch on Google Drive](https://drive.google.com/file/d/1jHQGrkNyPaIAFax7vE-6XD_GRGWY5j_P/view?usp=sharing)
 
 ---
 
