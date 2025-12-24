@@ -17,7 +17,11 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 app.use(cors({
-  origin: ['http://localhost:3003', 'http://localhost:3000'], // Allow frontend origins
+  origin: [
+    'http://localhost:3003',
+    'http://localhost:3000',
+    'https://numatix-frontend.vercel.app'  // Production frontend
+  ],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
