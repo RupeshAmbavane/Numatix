@@ -3,6 +3,8 @@
 
 > A full-stack microservices trading platform with real-time order execution, WebSocket updates, and live price charts.
 
+**Live Demo Video:** [Watch on Google Drive](https://drive.google.com/file/d/1jHQGrkNyPaIAFax7vE-6XD_GRGWY5j_P/view?usp=sharing)
+
 ## 🌐 Live Deployment
 
 **🚀 Try it now:** [https://numatix-frontend.vercel.app/](https://numatix-frontend.vercel.app/)
@@ -33,7 +35,6 @@
 
 A production-grade, full-stack real-time trading platform built with microservices architecture, demonstrating event-driven design patterns and WebSocket-based real-time updates.
 
-**Live Demo Video:** [Watch on Google Drive](https://drive.google.com/file/d/1jHQGrkNyPaIAFax7vE-6XD_GRGWY5j_P/view?usp=sharing)
 
 ---
 
